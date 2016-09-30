@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Unglish</title>
+    <script src="https://unpkg.com/react@15.3.2/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@15.3.2/dist/react-dom.js"></script>
+    <script src="https://unpkg.com/babel-core@5.8.38/browser.min.js"></script>
+    <style>
+.terms { white-space: pre-wrap; }
+
+.term { background: red; }
+.term-tag-Copula, /* is */
+.term-tag-Determiner, /* a */
+.term-tag-Preposition /* in */
+{ background: none; color: gray; }
+.term-tag-Noun, /* world */
+.term-tag-Infinitive /* test */
+{ background: none; color: blue; }
+.term-tag-Adjective /* awesome */
+{ background: none; color: green; }
+.term-tag-Adverb /* so */
+{ background: none; color: yellow; }
+.term-tag-PastTense /* let */
+{ background: none; color: gold; }
+.term-tag-Question /* so */
+{ background: none; color: orange; }
+.term-tag-Expression /* hello */
+{ background: none; color: red; }
+.term-tag-Pronoun /* me */
+{ background: none; color: red; }
+.term-tag-Demonym /* English */
+{ background: none; color: pink; }
+    </style>
+  </head>
+  <body>
+    <div id="content"></div>
+    <script type="text/babel">
+const ParseForm = React.createClass({
+  getInitialState () {
+    return {text: "Hello world, I'm English!", terms: []};
+  },
+  componentDidMount () {
+    this.parseForm();
+  },
+  handleChange (evt) {
+    evt.preventDefault();
+    this.setState({[evt.target.name]: evt.target.value});
+    this.parseForm();
+  },
+  parseForm () {
+    return fetchForm(this.refs.form)
+      .then(res => res.json())
+      .then(terms => { this.setState({terms}); });
+  },
+  render () {
+    let {text, terms} = this.state;
+    return (
+      <div>
+        <form method="POST" action="/api/parse" ref="form">
+          <textarea name="text" onChange={this.handleChange} value={text}></textarea>
+        </form>
+        <div className="terms">
+          {this.state.terms.map((term, i) => {
+            let {tag, whitespace} = term;
+            if (!term.text) return; // there is a term added for contractions
+            return (
+              <span
+                className={`term term-tag-${tag}`}
+                title={Object.keys(term.pos).join(", ")}
+                data-json={JSON.stringify(term)}
+                key={`term-${i}`}>
+                <span className="term-whitespace term-whitespace-preceding">{whitespace.preceding}</span>
+                <span className="term-text">{term.text}</span>
+                <span className="term-whitespace term-whitespace-trailing">{whitespace.trailing}</span>
+              </span>
+            )
+          })}
+        </div>
+      </div>
+    );
+  }
+});
+
+function fetchForm ($form) {
+  return fetch($form.action, {
+    method: $form.method,
+    // body: new FormData($form) // can't use this, sends as multipart/form-data
+    body: [].reduce.call($form.elements, (body, el) => {
+      if (el.name) body.append(el.name, el.value);
+      return body;
+    }, new URLSearchParams())
+  })
+}
+
+ReactDOM.render(
+  <ParseForm />,
+  document.getElementById('content')
+);
+     </script>
+  </body>
+</html>
