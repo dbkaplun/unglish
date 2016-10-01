@@ -79,7 +79,9 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
   parse(text).then(tree => {
     console.log("parsed:", JSON.stringify(text), tree);
     quill.removeFormat(0, Infinity);
+    let ops = [];
     let unformattedPOSs = {};
+    let i = 0;
     walk(tree, node => {
       let {type, position: {start, end}} = node;
       switch (type) {
@@ -92,7 +94,9 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
         case 'WordNode':
           let {data: {partOfSpeech}} = node;
           if (partOfSpeech in QUILL_POS_FORMATS) {
-            quill.formatText(start.offset, end.offset - start.offset, QUILL_POS_FORMATS[partOfSpeech] || {});
+            if (i < start.offset) ops.push({retain: start.offset - i});
+            ops.push({retain: end.offset - start.offset, attributes: QUILL_POS_FORMATS[partOfSpeech]});
+            i = end.offset;
           } else if (partOfSpeech) {
             (unformattedPOSs[partOfSpeech] = unformattedPOSs[partOfSpeech] || []).push(node);
           }
@@ -102,6 +106,7 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
           break;
       }
     });
+    quill.updateContents({ops});
     Object.keys(unformattedPOSs).forEach(pos => {
       let words = {};
       unformattedPOSs[pos].forEach(node => {
