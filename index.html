@@ -38,34 +38,29 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
   let text = quill.getText();
   parse(text).then(terms => {
     console.log('parsed:', JSON.stringify(text), terms);
-    var range = quill.getSelection();
-    quill.setContents(terms.reduce((deltas, term) => {
-      if (term.text) {
-        let {whitespace} = term;
-        if (whitespace.preceding) deltas.push({insert: whitespace.preceding});
-        deltas.push({
-          insert: term.text,
-          attributes: {
-            Copula: {color: 'gray'}, /* is */
-            Determiner: {color: 'gray'}, /* a */
-            Preposition: {color: 'gray'}, /* in */
-            Noun: {color: 'blue'}, /* world */
-            Infinitive: {color: 'blue'}, /* test */
-            Adjective: {color: 'green'}, /* awesome */
-            Adverb: {color: 'yellow'}, /* so */
-            PastTense: {color: 'gold'}, /* let */
-            Verb: {color: 'gold'}, /* let */
-            Question: {color: 'orange'}, /* so */
-            Expression: {color: 'red'}, /* hello */
-            Pronoun: {color: 'red'}, /* me */
-            Demonym: {color: 'pink'}, /* English */
-          }[term.tag] || {background: 'red'}
-        });
-        if (whitespace.trailing) deltas.push({insert: whitespace.trailing});
-      }
-      return deltas;
-    }, []));
-    quill.setSelection(range);
+    quill.removeFormat(0, Infinity);
+    let i = 0;
+    terms.forEach(term => {
+      let {text, tag, whitespace: {preceding, trailing}} = term;
+      if (!text) return;
+      i += preceding.length;
+      quill.formatText(i, text.length, {
+        Copula: {color: 'gray'}, /* is */
+        Determiner: {color: 'gray'}, /* a */
+        Preposition: {color: 'gray'}, /* in */
+        Noun: {color: 'blue'}, /* world */
+        Infinitive: {color: 'blue'}, /* test */
+        Adjective: {color: 'green'}, /* awesome */
+        Adverb: {color: 'yellow'}, /* so */
+        PastTense: {color: 'gold'}, /* let */
+        Verb: {color: 'gold'}, /* let */
+        Question: {color: 'orange'}, /* so */
+        Expression: {color: 'red'}, /* hello */
+        Pronoun: {color: 'red'}, /* me */
+        Demonym: {color: 'pink'}, /* English */
+      }[tag] || {background: 'red'});
+      i += text.length + trailing.length;
+    });
   });
 });
      </script>
