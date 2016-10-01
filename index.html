@@ -74,8 +74,9 @@ let quill = new Quill('#quill', {
 });
 
 quill.on('text-change', (newDelta, oldDelta, source) => {
-  if (source !== 'user') return;
+  if (source === 'api') return;
   let text = quill.getText();
+  localStorage.setItem('text', text);
   parse(text).then(tree => {
     console.log("parsed:", JSON.stringify(text), tree);
     quill.removeFormat(0, Infinity);
@@ -116,6 +117,9 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
     });
   });
 });
+
+let localStorageText = localStorage.getItem('text');
+if (localStorageText !== null) quill.setText(localStorageText, 'localStorage');
      </script>
   </body>
 </html>
