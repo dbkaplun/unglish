@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <title>Unglish</title>
     <link rel="stylesheet" href="//cdn.quilljs.com/1.0.6/quill.bubble.css">
     <style>
@@ -13,10 +13,50 @@ html, body { margin: 0; height: 100%; }
     <script src="//cdn.quilljs.com/1.0.6/quill.min.js" type="text/javascript"></script>
     <script>
 function parse (text) {
-  let body = new URLSearchParams();
-  body.set('text', text);
-  return fetch('/api/parse', {method: 'POST', body}).then(res => res.json());
+  return fetch('/api/parse', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  }).then(res => res.json());
 }
+
+function walk (tree, fn) {
+  let queue = [tree];
+  while (queue.length) {
+    let node = queue.shift();
+    if (fn(node) === false) return;
+    queue = queue.concat(Array.isArray(node.children) ? node.children : []);
+  }
+}
+
+const QUILL_POS_FORMATS = {
+  NN:   {color: 'blue'}, // "Tabloid", "interest", "role", "beauty", "Curvology", "book", "part", "evolution", "appreciation", "form", "gestate", "answer", "biologist", "anatomist", "future", "humankind", "proof", "woman", "sense", "comparison", "both", "fallback", "task", "species", "idea", "appearance", "sex", "heritage", "queasy", "author", "bingeing", "starvation", "life", "intake", "winter", "time", "food", "notion", "person", "body", "psychology", "revelation", "question", "balance", "shape", "success", "world", "one"
+  NNS:  {color: 'blue'}, // "newspapers", "women", "curves", "media", "forces", "notions", "men", "undulations", "Men", "bodies", "children", "bums", "boobs", "pins", "genes", "terms", "changes", "lives", "couples", "Humans", "matters", "people", "questions", "explanations", "disorders", "answers", "Episodes", "features", "animals", "relics", "observations", "readers", "clothes", "book", "demands"
+  NNP:  {color: 'blue', bold: true}, // "David", "Bainbridge", "Mr"
+
+  VB:   {color: 'gold'}, // "take", "flaunt", "bear", "nourish", "salivate", "ensure", "begin", "be", "overcome", "reduce", "seem", "protect", "become", "mean"
+  VBG:  {color: 'gold'}, // "constructing", "understanding", "growing", "child", "reproducing", "reading", "eating", "Eating", "conflicting", "asking"
+  VBZ:  {color: 'gold'}, // "is", "focuses", "suggests", "carries", "explains", "makes", "provides", "urges", "argues", "writes", "raises", "comes", "does"
+  VBN:  {color: 'gold'}, // "discussed", "well", "desired", "erased"
+  VBD:  {color: 'gold'}, // "played", "was", "were", "existed"
+  VBP:  {color: 'gold'}, // "differ", "are", "have", "want", "do", "shroud"
+  MD:   {color: 'gold', italic: true}, // "will", "cannot", "could"
+
+  PRP:  {color: 'gray', bold: true}, // "They", "He", "it", "they", "them", "he", "us"
+  PRP$: {color: 'gray', bold: true}, // "their", "his", "our"
+
+  JJ:   {color: 'green'}, // "prurient", "other", "cultural", "female", "new", "necessary", "simple", "British", "reproductive", "veterinary", "curvy", "straight", "enviable", "good", "such", "evolutionary", "plump", "single", "fatty", "arduous", "many", "uncomfortable", "uneasy", "few", "much", "long", "interesting", "speculative", "normal", "pre", "unpredictable", "facile", "ultimate", "ancient", "modern", "unnatural", "worth"
+  JJR:  {color: 'green'}, // "more", "baser"
+  RB:   {color: 'green'}, // "often", "simply", "so", "enough", "just", "highly", "still", "supply", "especially", "passively", "even", "not", "quite"
+
+  WP:   {color: 'orange'}, // "who", "what"
+  WRB:  {color: 'orange'}, // "Why", "when"
+
+  DT:   {color: 'gray'}, // "a", "The", "the", "those", "this", "these", "each", "That", "some", "Some", "no"
+  IN:   {color: 'gray'}, // "in", "of", "by", "on", "than", "that", "over", "while", "up", "throughout", "for", "with", "as", "For", "because", "about", "though", "if"
+  CC:   {color: 'gray'}, // "and", "But", "but"
+  TO:   {color: 'gray'}, // "to"
+};
 
 let quill = new Quill('#quill', {
   modules: {
@@ -29,37 +69,45 @@ let quill = new Quill('#quill', {
       }, {})
     }
   },
-  placeholder: 'Enter some text...',
+  placeholder: "Enter some text...",
   theme: 'bubble'
 });
 
 quill.on('text-change', (newDelta, oldDelta, source) => {
   if (source !== 'user') return;
   let text = quill.getText();
-  parse(text).then(terms => {
-    console.log('parsed:', JSON.stringify(text), terms);
+  parse(text).then(tree => {
+    console.log("parsed:", JSON.stringify(text), tree);
     quill.removeFormat(0, Infinity);
-    let i = 0;
-    terms.forEach(term => {
-      let {text, tag, whitespace: {preceding, trailing}} = term;
-      if (!text) return;
-      i += preceding.length;
-      quill.formatText(i, text.length, {
-        Copula: {color: 'gray'}, /* is */
-        Determiner: {color: 'gray'}, /* a */
-        Preposition: {color: 'gray'}, /* in */
-        Noun: {color: 'blue'}, /* world */
-        Infinitive: {color: 'blue'}, /* test */
-        Adjective: {color: 'green'}, /* awesome */
-        Adverb: {color: 'yellow'}, /* so */
-        PastTense: {color: 'gold'}, /* let */
-        Verb: {color: 'gold'}, /* let */
-        Question: {color: 'orange'}, /* so */
-        Expression: {color: 'red'}, /* hello */
-        Pronoun: {color: 'red'}, /* me */
-        Demonym: {color: 'pink'}, /* English */
-      }[tag] || {background: 'red'});
-      i += text.length + trailing.length;
+    let unformattedPOSs = {};
+    walk(tree, node => {
+      let {type, position: {start, end}} = node;
+      switch (type) {
+        case 'RootNode': break;
+        case 'ParagraphNode': break;
+        case 'SentenceNode': break;
+        case 'WhiteSpaceNode': break;
+        case 'PunctuationNode': break;
+        case 'TextNode': break;
+        case 'WordNode':
+          let {data: {partOfSpeech}} = node;
+          if (partOfSpeech in QUILL_POS_FORMATS) {
+            quill.formatText(start.offset, end.offset - start.offset, QUILL_POS_FORMATS[partOfSpeech] || {});
+          } else if (partOfSpeech) {
+            (unformattedPOSs[partOfSpeech] = unformattedPOSs[partOfSpeech] || []).push(node);
+          }
+          break;
+        default:
+          console.error(`Unknown node type '${type}'`, node);
+          break;
+      }
+    });
+    Object.keys(unformattedPOSs).forEach(pos => {
+      let words = {};
+      unformattedPOSs[pos].forEach(node => {
+        words[JSON.stringify(node.children[0].value)] = true;
+      });
+      console.error(`Unformatted '${pos}' for ${Object.keys(words).join(", ")}`);
     });
   });
 });

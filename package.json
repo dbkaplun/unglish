@@ -6,7 +6,8 @@
   "dependencies": {
     "body-parser": "1.15.2",
     "express": "4.14.0",
-    "nlp_compromise": "6.5.0"
+    "retext": "4.0.0",
+    "retext-pos": "1.0.0"
   },
   "devDependencies": {},
   "scripts": {
