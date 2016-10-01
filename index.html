@@ -12,23 +12,6 @@ html, body { margin: 0; height: 100%; }
     <div id="quill"></div>
     <script src="//cdn.quilljs.com/1.0.6/quill.min.js" type="text/javascript"></script>
     <script>
-function parse (text) {
-  return fetch('/api/parse', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({text})
-  }).then(res => res.json());
-}
-
-function walk (tree, fn) {
-  let queue = [tree];
-  while (queue.length) {
-    let node = queue.shift();
-    if (fn(node) === false) return;
-    queue = queue.concat(Array.isArray(node.children) ? node.children : []);
-  }
-}
-
 const QUILL_POS_FORMATS = {
   NN:   {color: 'blue'}, // "Tabloid", "interest", "role", "beauty", "Curvology", "book", "part", "evolution", "appreciation", "form", "gestate", "answer", "biologist", "anatomist", "future", "humankind", "proof", "woman", "sense", "comparison", "both", "fallback", "task", "species", "idea", "appearance", "sex", "heritage", "queasy", "author", "bingeing", "starvation", "life", "intake", "winter", "time", "food", "notion", "person", "body", "psychology", "revelation", "question", "balance", "shape", "success", "world", "one"
   NNS:  {color: 'blue'}, // "newspapers", "women", "curves", "media", "forces", "notions", "men", "undulations", "Men", "bodies", "children", "bums", "boobs", "pins", "genes", "terms", "changes", "lives", "couples", "Humans", "matters", "people", "questions", "explanations", "disorders", "answers", "Episodes", "features", "animals", "relics", "observations", "readers", "clothes", "book", "demands"
@@ -58,6 +41,23 @@ const QUILL_POS_FORMATS = {
   TO:   {color: 'gray'}, // "to"
 };
 
+function parse (text) {
+  return fetch('/api/parse', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  }).then(res => res.json());
+}
+
+function walk (tree, fn) {
+  let queue = [tree];
+  while (queue.length) {
+    let node = queue.shift();
+    if (fn(node) === false) return;
+    queue = queue.concat(Array.isArray(node.children) ? node.children : []);
+  }
+}
+
 let quill = new Quill('#quill', {
   modules: {
     toolbar: false,
@@ -78,7 +78,9 @@ quill.on('text-change', (newDelta, oldDelta, source) => {
   let text = quill.getText();
   localStorage.setItem('text', text);
   parse(text).then(tree => {
-    console.log("parsed:", JSON.stringify(text), tree);
+    console.log(`Parsed ${text.length} chars. Access parse tree as \`window.tree\` and text as \`window.text\`.`);
+    Object.assign(window, {tree, text});
+
     quill.removeFormat(0, Infinity);
     let ops = [];
     let unformattedPOSs = {};
