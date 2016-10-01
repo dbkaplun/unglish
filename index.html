@@ -19,9 +19,7 @@ function parse (text) {
 }
 
 let quill = new Quill('#quill', {
-  modules: {
-    toolbar: []
-  },
+  modules: {toolbar: false},
   placeholder: 'Enter some text...',
   theme: 'bubble'
 });
