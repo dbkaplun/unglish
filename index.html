@@ -19,7 +19,16 @@ function parse (text) {
 }
 
 let quill = new Quill('#quill', {
-  modules: {toolbar: false},
+  modules: {
+    toolbar: false,
+    keyboard: {
+      // disable formatting
+      bindings: Object.keys(Quill.imports['modules/keyboard'].DEFAULTS.bindings).reduce((bindings, name) => {
+        bindings[name] = {handler () {}}
+        return bindings;
+      }, {})
+    }
+  },
   placeholder: 'Enter some text...',
   theme: 'bubble'
 });
