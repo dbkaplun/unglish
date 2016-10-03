@@ -21478,7 +21478,11 @@
 	  url.searchParams.append('properties', JSON.stringify(Object.assign({
 	    annotators: 'tokenize,ssplit,pos,ner,depparse,openie'
 	  }, opts)));
-	  return fetch(url, { method: 'POST', body: text }).then(function (res) {
+	  return fetch(url, {
+	    method: 'POST',
+	    body: text,
+	    mode: 'cors'
+	  }).then(function (res) {
 	    return res.json();
 	  });
 	}

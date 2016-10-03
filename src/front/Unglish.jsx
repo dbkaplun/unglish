@@ -41,7 +41,11 @@ function parse (text, opts) {
     // 'coref.md.type': 'dep',
     // 'coref.mode': 'statistical'
   }, opts)));
-  return fetch(url, {method: 'POST', body: text}).then(res => res.json());
+  return fetch(url, {
+    method: 'POST',
+    body: text,
+    mode: 'cors'
+  }).then(res => res.json());
 }
 
 var Unglish = React.createClass({
