@@ -3,34 +3,43 @@ const Quill = require('quill');
 
 require('quill/dist/quill.core.css');
 
-// https://cs.nyu.edu/grishman/jet/guide/PennPOS.html
+// https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 const QUILL_POS_FORMATS = {
-  NN:   {color: 'blue'}, // "Tabloid", "interest", "role", "beauty", "Curvology", "book", "part", "evolution", "appreciation", "form", "gestate", "answer", "biologist", "anatomist", "future", "humankind", "proof", "woman", "sense", "comparison", "both", "fallback", "task", "species", "idea", "appearance", "sex", "heritage", "queasy", "author", "bingeing", "starvation", "life", "intake", "winter", "time", "food", "notion", "person", "body", "psychology", "revelation", "question", "balance", "shape", "success", "world", "one"
-  NNS:  {color: 'blue'}, // "newspapers", "women", "curves", "media", "forces", "notions", "men", "undulations", "Men", "bodies", "children", "bums", "boobs", "pins", "genes", "terms", "changes", "lives", "couples", "Humans", "matters", "people", "questions", "explanations", "disorders", "answers", "Episodes", "features", "animals", "relics", "observations", "readers", "clothes", "book", "demands"
-  NNP:  {color: 'blue', bold: true}, // "David", "Bainbridge", "Mr"
+  NN:   {color: 'blue'}, // "interest", "role", "beauty", "book", "part", "evolution", "understanding", "appreciation", "form", "Men", "answer", "biologist", "anatomist", "future", "humankind", "proof", "woman", "sense", "comparison", "fatty", "fallback", "task", "reading", "idea", "baser", "appearance", "sex", "heritage", "author", "bingeing", "starvation", "life", "intake", "winter", "time", "food", "supply", "notion", "shroud", "person", "body", "psychology", "revelation", "question", "shape", "success", "world"
+  NNS:  {color: 'blue'}, // "newspapers", "women", "curves", "media", "forces", "notions", "men", "undulations", "bodies", "children", "bums", "boobs", "pins", "genes", "terms", "changes", "lives", "couples", "species", "Humans", "matters", "people", "questions", "explanations", "disorders", "answers", "Episodes", "features", "animals", "relics", "observations", "readers", "clothes", "demands"
+  NNP:  {color: 'blue', bold: true}, // "Curvology", "David", "Bainbridge", "Mr", "Eating"
+  CD:   {color: 'blue'}, // "one"
 
-  VB:   {color: 'gold'}, // "take", "flaunt", "bear", "nourish", "salivate", "ensure", "begin", "be", "overcome", "reduce", "seem", "protect", "become", "mean"
-  VBG:  {color: 'gold'}, // "constructing", "understanding", "growing", "child", "reproducing", "reading", "eating", "Eating", "conflicting", "asking"
+  VB:   {color: 'gold'}, // "gestate", "bear", "nourish", "ensure", "plump", "be", "have", "want", "reduce", "seem", "protect", "mean", "balance", "answer"
   VBZ:  {color: 'gold'}, // "is", "focuses", "suggests", "carries", "explains", "makes", "provides", "urges", "argues", "writes", "raises", "comes", "does"
-  VBN:  {color: 'gold'}, // "discussed", "well", "desired", "erased"
-  VBD:  {color: 'gold'}, // "played", "was", "were", "existed"
-  VBP:  {color: 'gold'}, // "differ", "are", "have", "want", "do", "shroud"
-  MD:   {color: 'gold', italic: true}, // "will", "cannot", "could"
+  VBG:  {color: 'gold'}, // "constructing", "growing", "reproducing", "eating", "conflicting", "asking"
+  VBN:  {color: 'gold'}, // "discussed", "played", "overcome", "existed", "desired", "erased"
+  VBD:  {color: 'gold'}, // "was", "were"
+  VBP:  {color: 'gold'}, // "take", "flaunt", "differ", "salivate", "are", "begin", "have", "do", "become"
+  MD:   {color: 'gold', italic: true}, // "will", "can", "could"
 
   PRP:  {color: 'gray', bold: true}, // "They", "He", "it", "they", "them", "he", "us"
   PRP$: {color: 'gray', bold: true}, // "their", "his", "our"
 
-  JJ:   {color: 'green'}, // "prurient", "other", "cultural", "female", "new", "necessary", "simple", "British", "reproductive", "veterinary", "curvy", "straight", "enviable", "good", "such", "evolutionary", "plump", "single", "fatty", "arduous", "many", "uncomfortable", "uneasy", "few", "much", "long", "interesting", "speculative", "normal", "pre", "unpredictable", "facile", "ultimate", "ancient", "modern", "unnatural", "worth"
-  JJR:  {color: 'green'}, // "more", "baser"
-  RB:   {color: 'green'}, // "often", "simply", "so", "enough", "just", "highly", "still", "supply", "especially", "passively", "even", "not", "quite"
+  JJ:   {color: 'green'}, // "Tabloid", "prurient", "other", "cultural", "female", "new", "necessary", "simple", "British", "reproductive", "veterinary", "curvy", "straight", "enviable", "well-nourished", "good", "child-feeding", "such", "evolutionary", "single", "arduous", "many", "uncomfortable", "uneasy", "few", "long", "enough", "queasy", "interesting", "speculative", "normal", "pre-agricultural", "unpredictable", "facile", "ultimate", "ancient", "modern", "unnatural", "worth"
+  JJR:  {color: 'green'}, // "more"
+  RB:   {color: 'green'}, // "often", "simply", "so", "much", "as", "not", "just", "highly", "still", "especially", "passively", "even", "quite"
+  RP:   {color: 'green'}, // "over", "up"
 
   WP:   {color: 'orange'}, // "who", "what"
   WRB:  {color: 'orange'}, // "Why", "when"
+  WDT:  {color: 'orange'}, // "that"
 
-  DT:   {color: 'gray'}, // "a", "The", "the", "those", "this", "these", "each", "That", "some", "Some", "no"
-  IN:   {color: 'gray'}, // "in", "of", "by", "on", "than", "that", "over", "while", "up", "throughout", "for", "with", "as", "For", "because", "about", "though", "if"
+  DT:   {color: 'gray'}, // "a", "The", "the", "those", "this", "both", "these", "each", "That", "some", "Some", "no"
+  IN:   {color: 'gray'}, // "in", "of", "by", "on", "than", "that", "while", "throughout", "for", "with", "as", "For", "because", "about", "though", "if"
   CC:   {color: 'gray'}, // "and", "But", "but"
   TO:   {color: 'gray'}, // "to"
+  POS:  {color: 'gray'}, // "’s"
+  '``': {color: 'gray'}, // "“"
+  "''": {color: 'gray'}, // "”"
+  ':':  {color: 'gray'}, // "—", ":", ";"
+  ',':  {color: 'gray'}, // ","
+  '.':  {color: 'gray'} // ".", "?"
 };
 
 function parse (text, opts) {
