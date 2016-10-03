@@ -21468,7 +21468,7 @@
 	  TO: { color: 'gray' } };
 
 	function parse(text, opts) {
-	  var url = new URL(location.protocol + '//corenlp.run');
+	  var url = new URL('http://corenlp.run');
 	  url.searchParams.append('properties', JSON.stringify(Object.assign({
 	    annotators: 'tokenize,ssplit,pos,ner,depparse,openie'
 	  }, opts)));

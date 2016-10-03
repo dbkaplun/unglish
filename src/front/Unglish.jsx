@@ -34,7 +34,7 @@ const QUILL_POS_FORMATS = {
 };
 
 function parse (text, opts) {
-  let url = new URL(`${location.protocol}//corenlp.run`);
+  let url = new URL(`http://corenlp.run`);
   url.searchParams.append('properties', JSON.stringify(Object.assign({
     annotators: 'tokenize,ssplit,pos,ner,depparse,openie',
     // date: new Date().toISOString(),
