@@ -1,5 +1,6 @@
 const React = require('react');
 const Quill = require('quill'); require('quill/dist/quill.core.css');
+const _ = require('lodash');
 
 const coreNLP = require('./coreNLP');
 
@@ -61,10 +62,7 @@ var Unglish = React.createClass({
         toolbar: false,
         keyboard: {
           // disable formatting
-          bindings: Object.keys(Quill.imports['modules/keyboard'].DEFAULTS.bindings).reduce((bindings, name) => {
-            bindings[name] = {handler () {}}
-            return bindings;
-          }, {})
+          bindings: _.mapValues(Quill.imports['modules/keyboard'].DEFAULTS.bindings, _.constant({handler () {}}))
         }
       }
     });
@@ -77,13 +75,13 @@ var Unglish = React.createClass({
     if (source === 'api') return;
     let text = this.quill.getText();
     this.setState({text});
-    if (typeof this.props.onChange === 'function') this.props.onChange(text);
+    _.invoke(this, 'props.onChange', text);
     coreNLP(text).then(this.onParsed);
   },
 
   onParsed (parsed) {
     this.setState({parsed});
-    if (typeof this.props.onParsed === 'function') this.props.onParsed(parsed);
+    _.invoke(this, 'props.onParsed', parsed);
 
     this.quill.removeFormat(0, Infinity);
     let ops = [];
@@ -102,26 +100,54 @@ var Unglish = React.createClass({
       });
     });
     this.quill.updateContents({ops});
-    Object.keys(unformattedPOSs).forEach(pos => {
-      let tokens = {};
-      unformattedPOSs[pos].forEach(({originalText}) => {
-        tokens[JSON.stringify(originalText)] = true;
-      });
-      console.error(`Unformatted '${pos}' for ${Object.keys(tokens).join(", ")}`);
+    _.forEach(unformattedPOSs, (tokens, pos) => {
+      console.error(`Unformatted '${pos}' for ${_(tokens)
+        .map('originalText')
+        .uniq()
+        .map(JSON.stringify)
+        .join(", ")}`);
     });
   },
 
   onQuillSelectionChange (selection, oldSelection, source) {
     this.setState({selection});
-    if (!selection) return;
-    // TODO: get sentences present in selection, send them to
-    // http://displacy.spacy.io/?full=This+is+some+sentence+text.
-    var selectedText = this.quill.getText(selection.index, selection.length);
+  },
+
+  getSentence (characterOffset) {
+    let sentences = _.get(this.state, 'parsed.sentences', []);
+    let i = _(sentences)
+      .map(({tokens: [{characterOffsetBegin}]}) => characterOffsetBegin)
+      .sortedIndex(characterOffset);
+    let sentence = sentences[_.clamp(i, sentences.length - 1)];
+    if (!sentence) return;
+    if (_.first(sentence.tokens).characterOffsetBegin >  characterOffset) i--;
+    if (_.last (sentence.tokens).characterOffsetEnd   <= characterOffset) i = -1;
+    return _.nth(sentences, i);
   },
 
   render () {
+    let {selection} = this.state;
+    let sentence;
+    if (selection) {
+      let sentenceBegin = _.first(this.getSentence(selection.index)                   .tokens).characterOffsetBegin;
+      let sentenceEnd   = _.last (this.getSentence(selection.index + selection.length).tokens).characterOffsetEnd;
+      sentence = this.quill.getText(sentenceBegin, sentenceEnd - sentenceBegin);
+    }
     return (
-      <div ref="quill" />
+      <div className="unglish">
+        <div
+          ref="quill"
+          className="unglish-quill" />
+        {sentence
+          ? (
+            <iframe
+              src={`http://displacy.spacy.io/?full=${encodeURIComponent(sentence)}`}
+              className="unglish-displacy"
+              width="100%" height="33.3%" />
+          )
+          : null
+        }
+      </div>
     );
   }
 });
