@@ -44,7 +44,7 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
 	var React = __webpack_require__(1);
 	var ReactDOM = __webpack_require__(34);
@@ -53,12 +53,18 @@
 
 	__webpack_require__(182);
 
-	ReactDOM.render(React.createElement(Unglish, {
+	var GLOBAL_NAME = 'unglish';
+
+	global[GLOBAL_NAME] = ReactDOM.render(React.createElement(Unglish, {
 	  initialText: localStorage.getItem('text') || '',
 	  onChange: function onChange(text) {
 	    localStorage.setItem('text', text);
+	  },
+	  onParsed: function onParsed() {
+	    console.log('Parsed ' + global.unglish.state.text.length + ' chars. Access parsed with \'window.' + GLOBAL_NAME + '.state.parsed\' and text with \'window.' + GLOBAL_NAME + '.state.text\'.');
 	  }
 	}), document.getElementById('unglish'));
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
 /* 1 */
