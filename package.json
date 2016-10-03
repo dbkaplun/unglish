@@ -2,26 +2,37 @@
   "name": "unglish",
   "version": "1.0.0",
   "description": "Parse and visualize English text",
-  "main": "server.js",
+  "homepage": "https://github.com/dbkaplun/unglish",
+  "repository": "git@github.com:dbkaplun/unglish.git",
+  "bugs": "https://github.com/dbkaplun/unglish/issues",
+  "main": "src/back/index.js",
+  "scripts": {
+    "start": "node .",
+    "prod": "NODE_ENV=production npm start",
+    "build": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "body-parser": "1.15.2",
     "express": "4.14.0",
     "retext": "4.0.0",
     "retext-pos": "1.0.0"
   },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dbkaplun/unglish.git"
+  "devDependencies": {
+    "babel-core": "6.17.0",
+    "babel-loader": "6.2.5",
+    "babel-preset-es2015": "6.16.0",
+    "babel-preset-react": "6.16.0",
+    "css-loader": "0.25.0",
+    "less": "2.7.1",
+    "less-loader": "2.2.3",
+    "quill": "1.0.6",
+    "react": "15.3.2",
+    "react-dom": "15.3.2",
+    "style-loader": "0.13.1",
+    "webpack": "1.13.2",
+    "webpack-dev-middleware": "1.8.3"
   },
   "author": "Dan Kaplun <dbkaplun@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/dbkaplun/unglish/issues"
-  },
-  "homepage": "https://github.com/dbkaplun/unglish#readme"
+  "license": "MIT"
 }

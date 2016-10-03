@@ -1,7 +1,4 @@
-#!/usr/bin/env node
-
 const express = require('express');
-const bodyParser = require('body-parser');
 const retext = require('retext');
 const retextPOS = require('retext-pos');
 
@@ -16,13 +13,4 @@ api.post('/parse', (req, res) => {
     .process(req.body.text);
 });
 
-let server = express();
-server.use(bodyParser.json());
-server.use(bodyParser.urlencoded({extended: true}));
-server.use(express.static('.'));
-server.use(['/api', '/api/v1'], api);
-server.listen();
-
-let listener = server.listen(3615, () => {
-  console.log(`Listening on http://localhost:${listener.address().port}`);
-});
+module.exports = api;
