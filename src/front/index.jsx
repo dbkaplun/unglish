@@ -6,6 +6,9 @@ const Unglish = require('./Unglish.jsx');
 require('./index.less');
 
 ReactDOM.render(
-  <Unglish initialText={localStorage.getItem('text') || ''} />,
+  <Unglish
+    initialText={localStorage.getItem('text') || ''}
+    onChange={text => { localStorage.setItem('text', text); }}
+    />,
   document.getElementById('unglish')
 );

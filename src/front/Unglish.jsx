@@ -33,21 +33,15 @@ const QUILL_POS_FORMATS = {
   TO:   {color: 'gray'}, // "to"
 };
 
-function parse (text) {
-  return fetch('/api/parse', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({text})
-  }).then(res => res.json());
-}
-
-function walk (tree, fn) {
-  let queue = [tree];
-  while (queue.length) {
-    let node = queue.shift();
-    if (fn(node) === false) return;
-    queue = queue.concat(Array.isArray(node.children) ? node.children : []);
-  }
+function parse (text, opts) {
+  let url = new URL(`${location.protocol}//corenlp.run`);
+  url.searchParams.append('properties', JSON.stringify(Object.assign({
+    annotators: 'tokenize,ssplit,pos,ner,depparse,openie',
+    // date: new Date().toISOString(),
+    // 'coref.md.type': 'dep',
+    // 'coref.mode': 'statistical'
+  }, opts)));
+  return fetch(url, {method: 'POST', body: text}).then(res => res.json());
 }
 
 var Unglish = React.createClass({
@@ -63,7 +57,6 @@ var Unglish = React.createClass({
 
   initQuill () {
     this.quill = new Quill(this.refs.quill, {
-      text: this.props.text,
       placeholder: "Enter some text...",
       theme: 'bubble',
       modules: {
@@ -79,52 +72,44 @@ var Unglish = React.createClass({
     });
     this.quill.on('text-change', this.onQuillTextChange);
     this.quill.on('selection-change', this.onQuillSelectionChange);
+    this.quill.setText(this.state.text, 'initQuill');
   },
 
   onQuillTextChange (newDelta, oldDelta, source) {
     if (source === 'api') return;
     let text = this.quill.getText();
     this.setState({text});
-    localStorage.setItem('text', text);
-    parse(text).then(tree => {
-      this.setState({tree});
+    if (typeof this.props.onChange === 'function') this.props.onChange(text);
+    parse(text).then(this.onParsed);
+  },
 
-      this.quill.removeFormat(0, Infinity);
-      let ops = [];
-      let unformattedPOSs = {};
-      let i = 0;
-      walk(tree, node => {
-        let {type, position: {start, end}} = node;
-        switch (type) {
-          case 'RootNode': break;
-          case 'ParagraphNode': break;
-          case 'SentenceNode': break;
-          case 'WhiteSpaceNode': break;
-          case 'PunctuationNode': break;
-          case 'TextNode': break;
-          case 'WordNode':
-            let {data: {partOfSpeech}} = node;
-            if (partOfSpeech in QUILL_POS_FORMATS) {
-              if (i < start.offset) ops.push({retain: start.offset - i});
-              ops.push({retain: end.offset - start.offset, attributes: QUILL_POS_FORMATS[partOfSpeech]});
-              i = end.offset;
-            } else if (partOfSpeech) {
-              (unformattedPOSs[partOfSpeech] = unformattedPOSs[partOfSpeech] || []).push(node);
-            }
-            break;
-          default:
-            console.error(`Unknown node type '${type}'`, node);
-            break;
+  onParsed (parsed) {
+    this.setState({parsed});
+    if (typeof this.props.onParsed === 'function') this.props.onParsed(parsed);
+
+    this.quill.removeFormat(0, Infinity);
+    let ops = [];
+    let unformattedPOSs = {};
+    let i = 0;
+    parsed.sentences.forEach(({tokens}) => {
+      tokens.forEach(token => {
+        let {pos, characterOffsetBegin, characterOffsetEnd} = token;
+        if (pos in QUILL_POS_FORMATS) {
+          if (i < characterOffsetBegin) ops.push({retain: characterOffsetBegin - i});
+          ops.push({retain: characterOffsetEnd - characterOffsetBegin, attributes: QUILL_POS_FORMATS[pos]});
+          i = characterOffsetEnd;
+        } else if (pos) {
+          (unformattedPOSs[pos] = unformattedPOSs[pos] || []).push(token);
         }
       });
-      this.quill.updateContents({ops});
-      Object.keys(unformattedPOSs).forEach(pos => {
-        let words = {};
-        unformattedPOSs[pos].forEach(node => {
-          words[JSON.stringify(node.children[0].value)] = true;
-        });
-        console.error(`Unformatted '${pos}' for ${Object.keys(words).join(", ")}`);
+    });
+    this.quill.updateContents({ops});
+    Object.keys(unformattedPOSs).forEach(pos => {
+      let tokens = {};
+      unformattedPOSs[pos].forEach(({originalText}) => {
+        tokens[JSON.stringify(originalText)] = true;
       });
+      console.error(`Unformatted '${pos}' for ${Object.keys(tokens).join(", ")}`);
     });
   },
 

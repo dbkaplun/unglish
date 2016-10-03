@@ -53,7 +53,12 @@
 
 	__webpack_require__(182);
 
-	ReactDOM.render(React.createElement(Unglish, { initialText: localStorage.getItem('text') || '' }), document.getElementById('unglish'));
+	ReactDOM.render(React.createElement(Unglish, {
+	  initialText: localStorage.getItem('text') || '',
+	  onChange: function onChange(text) {
+	    localStorage.setItem('text', text);
+	  }
+	}), document.getElementById('unglish'));
 
 /***/ },
 /* 1 */
@@ -21462,23 +21467,14 @@
 	  CC: { color: 'gray' }, // "and", "But", "but"
 	  TO: { color: 'gray' } };
 
-	function parse(text) {
-	  return fetch('/api/parse', {
-	    method: 'POST',
-	    headers: { 'Content-Type': 'application/json' },
-	    body: JSON.stringify({ text: text })
-	  }).then(function (res) {
+	function parse(text, opts) {
+	  var url = new URL(location.protocol + '//corenlp.run');
+	  url.searchParams.append('properties', JSON.stringify(Object.assign({
+	    annotators: 'tokenize,ssplit,pos,ner,depparse,openie'
+	  }, opts)));
+	  return fetch(url, { method: 'POST', body: text }).then(function (res) {
 	    return res.json();
 	  });
-	}
-
-	function walk(tree, fn) {
-	  var queue = [tree];
-	  while (queue.length) {
-	    var node = queue.shift();
-	    if (fn(node) === false) return;
-	    queue = queue.concat(Array.isArray(node.children) ? node.children : []);
-	  }
 	}
 
 	var Unglish = React.createClass({
@@ -21493,7 +21489,6 @@
 	  },
 	  initQuill: function initQuill() {
 	    this.quill = new Quill(this.refs.quill, {
-	      text: this.props.text,
 	      placeholder: "Enter some text...",
 	      theme: 'bubble',
 	      modules: {
@@ -21511,64 +21506,49 @@
 	    });
 	    this.quill.on('text-change', this.onQuillTextChange);
 	    this.quill.on('selection-change', this.onQuillSelectionChange);
+	    this.quill.setText(this.state.text, 'initQuill');
 	  },
 	  onQuillTextChange: function onQuillTextChange(newDelta, oldDelta, source) {
-	    var _this = this;
-
 	    if (source === 'api') return;
 	    var text = this.quill.getText();
 	    this.setState({ text: text });
-	    localStorage.setItem('text', text);
-	    parse(text).then(function (tree) {
-	      _this.setState({ tree: tree });
+	    if (typeof this.props.onChange === 'function') this.props.onChange(text);
+	    parse(text).then(this.onParsed);
+	  },
+	  onParsed: function onParsed(parsed) {
+	    this.setState({ parsed: parsed });
+	    if (typeof this.props.onParsed === 'function') this.props.onParsed(parsed);
 
-	      _this.quill.removeFormat(0, Infinity);
-	      var ops = [];
-	      var unformattedPOSs = {};
-	      var i = 0;
-	      walk(tree, function (node) {
-	        var type = node.type;
-	        var _node$position = node.position;
-	        var start = _node$position.start;
-	        var end = _node$position.end;
+	    this.quill.removeFormat(0, Infinity);
+	    var ops = [];
+	    var unformattedPOSs = {};
+	    var i = 0;
+	    parsed.sentences.forEach(function (_ref) {
+	      var tokens = _ref.tokens;
 
-	        switch (type) {
-	          case 'RootNode':
-	            break;
-	          case 'ParagraphNode':
-	            break;
-	          case 'SentenceNode':
-	            break;
-	          case 'WhiteSpaceNode':
-	            break;
-	          case 'PunctuationNode':
-	            break;
-	          case 'TextNode':
-	            break;
-	          case 'WordNode':
-	            var partOfSpeech = node.data.partOfSpeech;
+	      tokens.forEach(function (token) {
+	        var pos = token.pos;
+	        var characterOffsetBegin = token.characterOffsetBegin;
+	        var characterOffsetEnd = token.characterOffsetEnd;
 
-	            if (partOfSpeech in QUILL_POS_FORMATS) {
-	              if (i < start.offset) ops.push({ retain: start.offset - i });
-	              ops.push({ retain: end.offset - start.offset, attributes: QUILL_POS_FORMATS[partOfSpeech] });
-	              i = end.offset;
-	            } else if (partOfSpeech) {
-	              (unformattedPOSs[partOfSpeech] = unformattedPOSs[partOfSpeech] || []).push(node);
-	            }
-	            break;
-	          default:
-	            console.error('Unknown node type \'' + type + '\'', node);
-	            break;
+	        if (pos in QUILL_POS_FORMATS) {
+	          if (i < characterOffsetBegin) ops.push({ retain: characterOffsetBegin - i });
+	          ops.push({ retain: characterOffsetEnd - characterOffsetBegin, attributes: QUILL_POS_FORMATS[pos] });
+	          i = characterOffsetEnd;
+	        } else if (pos) {
+	          (unformattedPOSs[pos] = unformattedPOSs[pos] || []).push(token);
 	        }
 	      });
-	      _this.quill.updateContents({ ops: ops });
-	      Object.keys(unformattedPOSs).forEach(function (pos) {
-	        var words = {};
-	        unformattedPOSs[pos].forEach(function (node) {
-	          words[JSON.stringify(node.children[0].value)] = true;
-	        });
-	        console.error('Unformatted \'' + pos + '\' for ' + Object.keys(words).join(", "));
+	    });
+	    this.quill.updateContents({ ops: ops });
+	    Object.keys(unformattedPOSs).forEach(function (pos) {
+	      var tokens = {};
+	      unformattedPOSs[pos].forEach(function (_ref2) {
+	        var originalText = _ref2.originalText;
+
+	        tokens[JSON.stringify(originalText)] = true;
 	      });
+	      console.error('Unformatted \'' + pos + '\' for ' + Object.keys(tokens).join(", "));
 	    });
 	  },
 	  onQuillSelectionChange: function onQuillSelectionChange(selection, oldSelection, source) {
