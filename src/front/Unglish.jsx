@@ -1,7 +1,7 @@
 const React = require('react');
-const Quill = require('quill');
+const Quill = require('quill'); require('quill/dist/quill.core.css');
 
-require('quill/dist/quill.core.css');
+const coreNLP = require('./coreNLP');
 
 // https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 const QUILL_POS_FORMATS = {
@@ -42,21 +42,6 @@ const QUILL_POS_FORMATS = {
   '.':  {color: 'gray'} // ".", "?"
 };
 
-function parse (text, opts) {
-  let url = new URL(`${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}http://corenlp.run`);
-  url.searchParams.append('properties', JSON.stringify(Object.assign({
-    annotators: 'tokenize,ssplit,pos,ner,depparse,openie',
-    // date: new Date().toISOString(),
-    // 'coref.md.type': 'dep',
-    // 'coref.mode': 'statistical'
-  }, opts)));
-  return fetch(url, {
-    method: 'POST',
-    body: text,
-    mode: 'cors'
-  }).then(res => res.json());
-}
-
 var Unglish = React.createClass({
   getInitialState () {
     // naming it initialX clearly indicates that the only purpose
@@ -93,7 +78,7 @@ var Unglish = React.createClass({
     let text = this.quill.getText();
     this.setState({text});
     if (typeof this.props.onChange === 'function') this.props.onChange(text);
-    parse(text).then(this.onParsed);
+    coreNLP(text).then(this.onParsed);
   },
 
   onParsed (parsed) {
