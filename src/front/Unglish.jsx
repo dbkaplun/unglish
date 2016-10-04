@@ -76,7 +76,7 @@ var Unglish = React.createClass({
     let text = this.quill.getText();
     this.setState({text});
     _.invoke(this, 'props.onChange', text);
-    coreNLP(text).then(this.onParsed);
+    coreNLP(text).then(this.onParsed); // TODO only parse changed text with getSentence
   },
 
   onParsed (parsed) {
