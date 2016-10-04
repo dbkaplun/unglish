@@ -74,15 +74,15 @@ var Unglish = React.createClass({
   onQuillTextChange (newDelta, oldDelta, source) {
     if (source === 'api') return;
     let text = this.quill.getText();
-    this.setState({text});
-    _.invoke(this, 'props.onChange', text);
-    coreNLP(text).then(this.onParsed); // TODO only parse changed text with getSentence
+
+    this.setState({
+      text,
+      parsePromise: coreNLP(text).then(this.onParsed)
+    });
+    _.invoke(this, 'props.onTextChange', text);
   },
 
   onParsed (parsed) {
-    this.setState({parsed});
-    _.invoke(this, 'props.onParsed', parsed);
-
     this.quill.removeFormat(0, Infinity);
     let ops = [];
     let unformattedPOSs = {};
@@ -107,10 +107,23 @@ var Unglish = React.createClass({
         .map(JSON.stringify)
         .join(", ")}`);
     });
+
+    this.setState({parsed});
+    _.invoke(this, 'props.onParsed', parsed);
   },
 
   onQuillSelectionChange (selection, oldSelection, source) {
     this.setState({selection});
+    _.invoke(this, 'props.onSelectionChange', selection);
+
+    if (selection) {
+      Promise.resolve(this.state.parsePromise).then(() => {
+        // wait for parse to call getSentence
+        let {characterOffsetBegin} = _.first(this.getSentence(selection.index)                   .tokens);
+        let {characterOffsetEnd}   = _.last (this.getSentence(selection.index + selection.length).tokens);
+        this.setState({selectedSentence: this.quill.getText(characterOffsetBegin, characterOffsetEnd - characterOffsetBegin)});
+      });
+    }
   },
 
   getSentence (characterOffset) {
@@ -126,22 +139,16 @@ var Unglish = React.createClass({
   },
 
   render () {
-    let {selection} = this.state;
-    let sentence;
-    if (selection) {
-      let sentenceBegin = _.first(this.getSentence(selection.index)                   .tokens).characterOffsetBegin;
-      let sentenceEnd   = _.last (this.getSentence(selection.index + selection.length).tokens).characterOffsetEnd;
-      sentence = this.quill.getText(sentenceBegin, sentenceEnd - sentenceBegin);
-    }
+    let {selectedSentence} = this.state;
     return (
       <div className="unglish">
         <div
           ref="quill"
           className="unglish-quill" />
-        {sentence
+        {selectedSentence
           ? (
             <iframe
-              src={`http://displacy.spacy.io/?full=${encodeURIComponent(sentence)}`}
+              src={`http://displacy.spacy.io/?full=${encodeURIComponent(selectedSentence)}`}
               className="unglish-displacy"
               width="100%" height="33.3%" />
           )
