@@ -9,6 +9,11 @@ switch (process.env.NODE_ENV) {
   case 'production': break;
   case 'development':
   default:
+    app.post('/test/data/*', (req, res, next) => {
+      // allow POSTs to test data to mock API calls
+      req.method = 'GET';
+      next();
+    });
     app.use(require('webpack-dev-middleware')(require('webpack')(require('../../webpack.config')), {
       publicPath: "/dist/front/"
     }));

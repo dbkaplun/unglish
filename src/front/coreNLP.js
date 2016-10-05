@@ -1,14 +1,20 @@
-module.exports = function coreNLP (text, opts) {
-  let url = new URL(`${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}http://corenlp.run`);
-  url.searchParams.append('properties', JSON.stringify(Object.assign({
+const _ = require('lodash');
+
+function coreNLP (text, opts) {
+  opts = _.merge({}, opts, coreNLP.DEFAULT_OPTS);
+  let url = new URL(opts.url);
+  url.searchParams.append('properties', JSON.stringify(opts.props));
+  return fetch(url, Object.assign({body: text}, opts.req)).then(res => res.json());
+}
+coreNLP.DEFAULT_OPTS = {
+  url: 'http://corenlp.run',
+  req: {method: 'POST', mode: 'cors'},
+  props: {
     annotators: 'tokenize,ssplit,pos,ner,depparse,openie',
     // date: new Date().toISOString(),
     // 'coref.md.type': 'dep',
     // 'coref.mode': 'statistical'
-  }, opts)));
-  return fetch(url, {
-    method: 'POST',
-    body: text,
-    mode: 'cors'
-  }).then(res => res.json());
-}
+  }
+};
+
+module.exports = coreNLP;
