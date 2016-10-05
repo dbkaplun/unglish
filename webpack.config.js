@@ -17,8 +17,8 @@ let config = {
         },
       },
       {
-        test: /\.(less|css)$/,
-        loader: 'style!css!less',
+        test: /\.(sass|scss|css)$/,
+        loader: 'style!css!sass',
       },
     ],
   },

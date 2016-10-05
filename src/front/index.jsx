@@ -3,7 +3,7 @@ const ReactDOM = require('react-dom');
 
 const Unglish = require('./Unglish.jsx');
 
-require('./index.less');
+require('./index.scss');
 
 const GLOBAL_NAME = 'unglish';
 

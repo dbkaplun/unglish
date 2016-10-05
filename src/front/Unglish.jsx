@@ -2,6 +2,8 @@ const React = require('react');
 const Quill = require('quill'); require('quill/dist/quill.core.css');
 const _ = require('lodash');
 
+const displaCy = require('exports?displaCy!displacy/assets/js/displacy');
+
 const coreNLP = require('./coreNLP');
 
 // https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
@@ -52,6 +54,8 @@ var Unglish = React.createClass({
 
   componentDidMount () {
     this.initQuill();
+    this.displacy = new displaCy('https://api.explosion.ai/displacy/dep/', {});
+    this.displacy.container = this.refs.displacy;
   },
 
   initQuill () {
@@ -121,7 +125,9 @@ var Unglish = React.createClass({
         // wait for parse to call getSentence
         let {characterOffsetBegin} = _.first(this.getSentence(selection.index)                   .tokens);
         let {characterOffsetEnd}   = _.last (this.getSentence(selection.index + selection.length).tokens);
-        this.setState({selectedSentence: this.quill.getText(characterOffsetBegin, characterOffsetEnd - characterOffsetBegin)});
+        let selectedSentence = this.quill.getText(characterOffsetBegin, characterOffsetEnd - characterOffsetBegin);
+        this.displacy.parse(selectedSentence);
+        this.setState({selectedSentence});
       });
     }
   },
@@ -142,18 +148,8 @@ var Unglish = React.createClass({
     let {selectedSentence} = this.state;
     return (
       <div className="unglish">
-        <div
-          ref="quill"
-          className="unglish-quill" />
-        {selectedSentence
-          ? (
-            <iframe
-              src={`http://displacy.spacy.io/?full=${encodeURIComponent(selectedSentence)}`}
-              className="unglish-displacy"
-              width="100%" height="33.3%" />
-          )
-          : null
-        }
+        <div ref="quill" className="unglish-quill" />
+        <div ref="displacy" className="unglish-displacy" />
       </div>
     );
   }
