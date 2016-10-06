@@ -125,11 +125,16 @@ var Unglish = React.createClass({
     if (selection) {
       Promise.resolve(this.state.parsePromise).then(() => {
         // wait for parse to call getSentence
-        let {characterOffsetBegin} = _.first(this.getSentence(selection.index)                   .tokens);
-        let {characterOffsetEnd}   = _.last (this.getSentence(selection.index + selection.length).tokens);
-        let selectedSentence = this.quill.getText(characterOffsetBegin, characterOffsetEnd - characterOffsetBegin);
-        this.displacy.parse(selectedSentence);
-        this.setState({selectedSentence});
+        let begin = _.first(this.getSentence(selection.index)                   .tokens).characterOffsetBegin;
+        let end   = _.last (this.getSentence(selection.index + selection.length).tokens).characterOffsetEnd;
+
+        this.displacy.parse(this.quill.getText(begin, end - begin));
+
+        let old = this.state.selectedSentence;
+        if (old) this.quill.formatText(old.begin, old.end - old.begin, {background: 'white'});
+        this.quill.formatText(begin, end - begin, {background: 'red'});
+
+        this.setState({selectedSentence: {begin, end}});
       });
     }
   },
@@ -147,7 +152,6 @@ var Unglish = React.createClass({
   },
 
   render () {
-    let {selectedSentence} = this.state;
     return (
       <div className="unglish">
         <div ref="quill" className="unglish-quill" />
