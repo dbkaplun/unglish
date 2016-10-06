@@ -141,10 +141,13 @@ var Unglish = React.createClass({
 
   getSentence (characterOffset) {
     let sentences = _.get(this.state, 'parsed.sentences', []);
-    let i = _(sentences)
-      .map(({tokens: [{characterOffsetBegin}]}) => characterOffsetBegin)
-      .sortedIndex(characterOffset);
-    let sentence = sentences[_.clamp(i, sentences.length - 1)];
+    let i = _.clamp(
+      _(sentences)
+        .map(({tokens: [{characterOffsetBegin}]}) => characterOffsetBegin)
+        .sortedIndex(characterOffset),
+      sentences.length - 1
+    );
+    let sentence = sentences[i];
     if (!sentence) return;
     if (_.first(sentence.tokens).characterOffsetBegin >  characterOffset) i--;
     if (_.last (sentence.tokens).characterOffsetEnd   <= characterOffset) i = -1;
