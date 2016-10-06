@@ -1,7 +1,7 @@
 const _ = require('lodash');
 
 function coreNLP (text, opts) {
-  opts = _.merge({}, opts, coreNLP.DEFAULT_OPTS);
+  opts = _.merge({}, coreNLP.DEFAULT_OPTS, opts);
   let url = new URL(opts.url);
   url.searchParams.append('properties', JSON.stringify(opts.props));
   return fetch(url, Object.assign({body: text}, opts.req)).then(res => res.json());
