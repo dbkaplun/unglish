@@ -1,10 +1,14 @@
+const webpack = require('webpack');
+const path = require('path');
+const _ = require('lodash');
+
 let config = {
-  context: `${__dirname}/src/front`,
+  context: path.join(__dirname, 'src/front'),
   entry: './index.jsx',
 
   output: {
-    path: `${__dirname}/dist/front`,
-    filename: "index.js",
+    path: path.join(__dirname, 'dist/front'),
+    filename: 'index.js',
   },
   module: {
     loaders: [
@@ -22,5 +26,13 @@ let config = {
       },
     ],
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': _(process.env)
+        .pick(['NODE_ENV', 'CORENLP_URL'])
+        .mapValues(val => `"${val}"`)
+        .value(),
+    }),
+  ],
 };
 module.exports = config;

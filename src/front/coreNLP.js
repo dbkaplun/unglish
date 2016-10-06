@@ -7,7 +7,7 @@ function coreNLP (text, opts) {
   return fetch(url, Object.assign({body: text}, opts.req)).then(res => res.json());
 }
 coreNLP.DEFAULT_OPTS = {
-  url: 'http://corenlp.run',
+  url: process.env.CORENLP_URL || 'http://corenlp.run',
   req: {method: 'POST', mode: 'cors'},
   props: {
     annotators: 'tokenize,ssplit,pos,ner,depparse,openie',

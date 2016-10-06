@@ -6,8 +6,6 @@ const displaCy = require('exports?displaCy!displacy/assets/js/displacy');
 
 const coreNLP = require('./coreNLP');
 
-let coreNLPurl = `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`
-
 // https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 const QUILL_POS_FORMATS = {
   NN:   {color: 'blue'}, // "interest", "role", "beauty", "book", "part", "evolution", "understanding", "appreciation", "form", "Men", "answer", "biologist", "anatomist", "future", "humankind", "proof", "woman", "sense", "comparison", "fatty", "fallback", "task", "reading", "idea", "baser", "appearance", "sex", "heritage", "author", "bingeing", "starvation", "life", "intake", "winter", "time", "food", "supply", "notion", "shroud", "person", "body", "psychology", "revelation", "question", "shape", "success", "world"
@@ -83,7 +81,9 @@ var Unglish = React.createClass({
 
     this.setState({
       text,
-      parsePromise: coreNLP(text, {url: coreNLPurl}).then(this.onParsed)
+      parsePromise: coreNLP(text, {
+        url: `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`
+      }).then(this.onParsed)
     });
     _.invoke(this, 'props.onTextChange', text);
   },
