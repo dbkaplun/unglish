@@ -49,7 +49,15 @@ const QUILL_POS_FORMATS = {
 var Unglish = React.createClass({
   mixins: [LocalStorageMixin],
   getInitialState () {
-    return {text: this.props.initialText};
+    return _.merge({
+      text: this.props.initialText,
+      coreNLPOpts: {
+        url: `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`
+      },
+    }, _([...new URLSearchParams(location.search.slice(1))])
+      .fromPairs()
+      .mapValues(JSON.parse)
+      .value());
   },
 
   componentDidMount () {
@@ -81,9 +89,7 @@ var Unglish = React.createClass({
 
     this.setState({
       text,
-      parsePromise: coreNLP(text, {
-        url: `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`
-      }).then(this.onParsed)
+      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed)
     });
     _.invoke(this, 'props.onTextChange', text);
   },
