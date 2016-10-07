@@ -1,4 +1,5 @@
 const React = require('react');
+const LocalStorageMixin = require('react-localstorage');
 const Quill = require('quill'); require('quill/dist/quill.core.css');
 const _ = require('lodash');
 
@@ -46,14 +47,13 @@ const QUILL_POS_FORMATS = {
 };
 
 var Unglish = React.createClass({
+  mixins: [LocalStorageMixin],
   getInitialState () {
-    // naming it initialX clearly indicates that the only purpose
-    // of the passed down prop is to initialize something internally
     return {text: this.props.initialText};
   },
 
   componentDidMount () {
-    this.initQuill();
+    process.nextTick(this.initQuill);
     this.displacy = new displaCy('https://api.explosion.ai/displacy/dep/', {});
     this.displacy.container = this.refs.displacy;
   },
@@ -72,7 +72,7 @@ var Unglish = React.createClass({
     });
     this.quill.on('text-change', this.onQuillTextChange);
     this.quill.on('selection-change', this.onQuillSelectionChange);
-    this.quill.setText(this.state.text, 'initQuill');
+    this.quill.setText(this.state.text || '', 'initQuill');
   },
 
   onQuillTextChange (newDelta, oldDelta, source) {

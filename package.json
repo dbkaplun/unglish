@@ -30,6 +30,7 @@
     "quill": "1.0.6",
     "react": "15.3.2",
     "react-dom": "15.3.2",
+    "react-localstorage": "0.3.0",
     "sass-loader": "4.0.2",
     "style-loader": "0.13.1",
     "webpack": "1.13.2",
