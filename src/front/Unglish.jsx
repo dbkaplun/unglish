@@ -43,7 +43,7 @@ const QUILL_POS_FORMATS = {
   "''": {color: 'gray'}, // "”"
   ':':  {color: 'gray'}, // "—", ":", ";"
   ',':  {color: 'gray'}, // ","
-  '.':  {color: 'gray'} // ".", "?"
+  '.':  {color: 'gray'}, // ".", "?"
 };
 
 var Unglish = React.createClass({
@@ -74,9 +74,9 @@ var Unglish = React.createClass({
         toolbar: false,
         keyboard: {
           // disable formatting
-          bindings: _.mapValues(Quill.imports['modules/keyboard'].DEFAULTS.bindings, _.constant({handler () {}}))
-        }
-      }
+          bindings: _.mapValues(Quill.imports['modules/keyboard'].DEFAULTS.bindings, _.constant({handler () {}})),
+        },
+      },
     });
     this.quill.on('text-change', this.onQuillTextChange);
     this.quill.on('selection-change', this.onQuillSelectionChange);
@@ -89,7 +89,7 @@ var Unglish = React.createClass({
 
     this.setState({
       text,
-      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed)
+      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed),
     });
     _.invoke(this, 'props.onTextChange', text);
   },
@@ -167,7 +167,7 @@ var Unglish = React.createClass({
         <div ref="displacy" className="unglish-displacy" />
       </div>
     );
-  }
+  },
 });
 
 module.exports = Unglish;
