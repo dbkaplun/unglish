@@ -51,19 +51,13 @@
 
 	var Unglish = __webpack_require__(172);
 
-	__webpack_require__(186);
+	__webpack_require__(188);
 
 	var GLOBAL_NAME = 'unglish';
 
-	global[GLOBAL_NAME] = ReactDOM.render(React.createElement(Unglish, {
-	  initialText: localStorage.getItem('text') || '',
-	  onTextChange: function onTextChange(text) {
-	    localStorage.setItem('text', text);
-	  },
-	  onParsed: function onParsed() {
-	    console.log('Parsed ' + global.unglish.state.text.length + ' chars. Access parsed with \'window.' + GLOBAL_NAME + '.state.parsed\' and text with \'window.' + GLOBAL_NAME + '.state.text\'.');
-	  }
-	}), document.getElementById('unglish'));
+	global[GLOBAL_NAME] = ReactDOM.render(React.createElement(Unglish, { onParsed: function onParsed() {
+	    console.log('Parsed ' + global[GLOBAL_NAME].state.text.length + ' chars. Access parsed with \'' + GLOBAL_NAME + '.state.parsed\' and text with \'' + GLOBAL_NAME + '.state.text\'.');
+	  } }), document.getElementById('unglish'));
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
@@ -21366,17 +21360,20 @@
 /* 172 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
 
 	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 	var React = __webpack_require__(1);
-	var Quill = __webpack_require__(173);__webpack_require__(178);
-	var _ = __webpack_require__(182);
+	var LocalStorageMixin = __webpack_require__(173);
+	var Quill = __webpack_require__(175);__webpack_require__(180);
+	var _ = __webpack_require__(184);
 
-	var displaCy = __webpack_require__(184);
+	var displaCy = __webpack_require__(186);
 
-	var coreNLP = __webpack_require__(185);
+	var coreNLP = __webpack_require__(187);
 
 	// https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 	var QUILL_POS_FORMATS = {
@@ -21414,18 +21411,29 @@
 	  "''": { color: 'gray' }, // "”"
 	  ':': { color: 'gray' }, // "—", ":", ";"
 	  ',': { color: 'gray' }, // ","
-	  '.': { color: 'gray' } // ".", "?"
-	};
+	  '.': { color: 'gray' } };
+
+	function ensureValidPromise(getPromise) {
+	  var promise = getPromise();
+	  return Promise.resolve(promise).then(function (val) {
+	    return promise === getPromise() ? val : ensureValidPromise(getPromise);
+	  });
+	}
 
 	var Unglish = React.createClass({
 	  displayName: 'Unglish',
+
+	  mixins: [LocalStorageMixin],
 	  getInitialState: function getInitialState() {
-	    // naming it initialX clearly indicates that the only purpose
-	    // of the passed down prop is to initialize something internally
-	    return { text: this.props.initialText };
+	    return _.merge({
+	      text: this.props.initialText,
+	      coreNLPOpts: {
+	        url: '' + (location.protocol !== 'http:' ? location.protocol + '//cors-anywhere.herokuapp.com/' : '') + coreNLP.DEFAULT_OPTS.url
+	      }
+	    }, _([].concat(_toConsumableArray(new URLSearchParams(location.search.slice(1))))).fromPairs().mapValues(JSON.parse).value());
 	  },
 	  componentDidMount: function componentDidMount() {
-	    this.initQuill();
+	    process.nextTick(this.initQuill);
 	    this.displacy = new displaCy('https://api.explosion.ai/displacy/dep/', {});
 	    this.displacy.container = this.refs.displacy;
 	  },
@@ -21445,7 +21453,10 @@
 	    });
 	    this.quill.on('text-change', this.onQuillTextChange);
 	    this.quill.on('selection-change', this.onQuillSelectionChange);
-	    this.quill.setText(this.state.text, 'initQuill');
+
+	    var text = this.state.text;
+
+	    if (typeof text === 'string') this.quill.setText(text, 'initQuill');
 	  },
 	  onQuillTextChange: function onQuillTextChange(newDelta, oldDelta, source) {
 	    if (source === 'api') return;
@@ -21453,9 +21464,7 @@
 
 	    this.setState({
 	      text: text,
-	      parsePromise: coreNLP(text, {
-	        url: '' + (location.protocol !== 'http:' ? location.protocol + '//cors-anywhere.herokuapp.com/' : '') + coreNLP.DEFAULT_OPTS.url
-	      }).then(this.onParsed)
+	      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed)
 	    });
 	    _.invoke(this, 'props.onTextChange', text);
 	  },
@@ -21486,30 +21495,53 @@
 	      console.error('Unformatted \'' + pos + '\' for ' + _(tokens).map('originalText').uniq().map(JSON.stringify).join(", "));
 	    });
 
+	    this.getSelectedSentence().then(this.setSelectedSentence);
+
 	    this.setState({ parsed: parsed });
 	    _.invoke(this, 'props.onParsed', parsed);
 	  },
 	  onQuillSelectionChange: function onQuillSelectionChange(selection, oldSelection, source) {
-	    var _this = this;
-
 	    this.setState({ selection: selection });
 	    _.invoke(this, 'props.onSelectionChange', selection);
 
-	    if (selection) {
-	      Promise.resolve(this.state.parsePromise).then(function () {
-	        // wait for parse to call getSentence
-	        var begin = _.first(_this.getSentence(selection.index).tokens).characterOffsetBegin;
-	        var end = _.last(_this.getSentence(selection.index + selection.length).tokens).characterOffsetEnd;
+	    this.getSelectedSentence().then(this.setSelectedSentence);
+	  },
+	  getSelectedSentence: function getSelectedSentence() {
+	    var _this = this;
 
-	        _this.displacy.parse(_this.quill.getText(begin, end - begin));
+	    return ensureValidPromise(function () {
+	      return _this.state.parsePromise;
+	    }).then(function () {
+	      var selection = _this.quill.getSelection();
+	      if (!selection) return;
 
-	        var old = _this.state.selectedSentence;
-	        if (old) _this.quill.formatText(old.begin, old.end - old.begin, { background: 'white' });
-	        _this.quill.formatText(begin, end - begin, { background: 'red' });
+	      var beginSentence = _this.getSentence(selection.index);
+	      var begin = _.get(beginSentence, ['tokens', 0, 'characterOffsetBegin']);
+	      if (typeof begin !== 'number') return;
 
-	        _this.setState({ selectedSentence: { begin: begin, end: end } });
-	      });
+	      var endSentenceTokens = (_this.getSentence(selection.index + selection.length) || {}).tokens || [];
+	      var end = _.get(endSentenceTokens, [-1 + endSentenceTokens.length, 'characterOffsetEnd']);
+	      if (typeof end !== 'number') return;
+
+	      return { begin: begin, end: end };
+	    });
+	  },
+	  setSelectedSentence: function setSelectedSentence(selectedSentence) {
+	    var old = this.state.selectedSentence;
+	    if (old) {
+	      var begin = old.begin;
+	      var end = old.end;
+
+	      this.quill.formatText(begin, end - begin, { background: 'white' });
 	    }
+	    if (selectedSentence) {
+	      var _begin = selectedSentence.begin;
+	      var _end = selectedSentence.end;
+
+	      this.quill.formatText(_begin, _end - _begin, { background: 'yellow' });
+	      this.displacy.parse(this.quill.getText(_begin, _end - _begin));
+	    }
+	    this.setState({ selectedSentence: selectedSentence });
 	  },
 	  getSentence: function getSentence(characterOffset) {
 	    var sentences = _.get(this.state, 'parsed.sentences', []);
@@ -21536,9 +21568,204 @@
 	});
 
 	module.exports = Unglish;
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(29)))
 
 /***/ },
 /* 173 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global, process) {'use strict';
+	var React = __webpack_require__(1);
+	var warn = __webpack_require__(174);
+	var hasLocalStorage = 'localStorage' in global;
+	var ls, testKey;
+
+	if (hasLocalStorage) {
+	  testKey = 'react-localstorage.mixin.test-key';
+	  try {
+	    // Access to global `localStorage` property must be guarded as it
+	    // fails under iOS private session mode.
+	    ls = global.localStorage;
+	    ls.setItem(testKey, 'foo');
+	    ls.removeItem(testKey);
+	  } catch (e) {
+	    hasLocalStorage = false;
+	  }
+	}
+
+	// Warn if localStorage cannot be found or accessed.
+	if (process.browser) {
+	  warn(
+	    hasLocalStorage,
+	    'localStorage not found. Component state will not be stored to localStorage.'
+	  );
+	}
+
+	var Mixin = module.exports = {
+	  /**
+	   * Error checking. On update, ensure that the last state stored in localStorage is equal
+	   * to the state on the component. We skip the check the first time around as state is left
+	   * alone until mount to keep server rendering working.
+	   *
+	   * If it is not consistent, we know that someone else is modifying localStorage out from under us, so we throw
+	   * an error.
+	   *
+	   * There are a lot of ways this can happen, so it is worth throwing the error.
+	   */
+	  componentWillUpdate: function(nextProps, nextState) {
+	    if (!hasLocalStorage || !this.__stateLoadedFromLS) return;
+	    var key = getLocalStorageKey(this);
+	    if (key === false) return;
+	    var prevStoredState = ls.getItem(key);
+	    if (prevStoredState && ({}).NODE_ENV !== "production") {
+	      warn(
+	        prevStoredState === JSON.stringify(getSyncState(this, this.state)),
+	        'While component ' + getDisplayName(this) + ' was saving state to localStorage, ' +
+	        'the localStorage entry was modified by another actor. This can happen when multiple ' +
+	        'components are using the same localStorage key. Set the property `localStorageKey` ' +
+	        'on ' + getDisplayName(this) + '.'
+	      );
+	    }
+	    // Since setState() can't be called in CWU, it's a fine time to save the state.
+	    ls.setItem(key, JSON.stringify(getSyncState(this, nextState)));
+	  },
+
+	  /**
+	   * Load data.
+	   * This seems odd to do this on componentDidMount, but it prevents server checksum errors.
+	   * This is because the server has no way to know what is in your localStorage. So instead
+	   * of breaking the checksum and causing a full rerender, we instead change the component after mount
+	   * for an efficient diff.
+	   */
+	  componentDidMount: function () {
+	    if (!hasLocalStorage) return;
+	    var me = this;
+	    loadStateFromLocalStorage(this, function() {
+	      // After setting state, mirror back to localstorage.
+	      // This prevents invariants if the developer has changed the initial state of the component.
+	      ls.setItem(getLocalStorageKey(me), JSON.stringify(getSyncState(me, me.state)));
+	    });
+	  }
+	};
+
+	function loadStateFromLocalStorage(component, cb) {
+	  if (!ls) return;
+	  var key = getLocalStorageKey(component);
+	  if (key === false) return;
+	  var settingState = false;
+	  try {
+	    var storedState = JSON.parse(ls.getItem(key));
+	    if (storedState) {
+	      settingState = true;
+	      component.setState(storedState, done);
+	    }
+	  } catch(e) {
+	    if (console) console.warn("Unable to load state for", getDisplayName(component), "from localStorage.");
+	  }
+	  // If we didn't set state, run the callback right away.
+	  if (!settingState) done();
+
+	  function done() {
+	    // Flag this component as loaded.
+	    component.__stateLoadedFromLS = true;
+	    cb();
+	  }
+	}
+
+	function getDisplayName(component) {
+	  // at least, we cannot get displayname
+	  // via this.displayname in react 0.12
+	  return component.displayName || component.constructor.displayName || component.constructor.name;
+	}
+
+	function getLocalStorageKey(component) {
+	  if (component.getLocalStorageKey) return component.getLocalStorageKey();
+	  if (component.props.localStorageKey === false) return false;
+	  if (typeof component.props.localStorageKey === 'function') return component.props.localStorageKey.call(component);
+	  return component.props.localStorageKey || getDisplayName(component) || 'react-localstorage';
+	}
+
+	function getStateFilterKeys(component) {
+	  if (component.getStateFilterKeys) {
+	    return typeof component.getStateFilterKeys() === 'string' ?
+	      [component.getStateFilterKeys()] : component.getStateFilterKeys();
+	  }
+	  return typeof component.props.stateFilterKeys === 'string' ?
+	    [component.props.stateFilterKeys] : component.props.stateFilterKeys;
+	}
+
+	/**
+	* Filters state to only save keys defined in stateFilterKeys.
+	* If stateFilterKeys is not set, returns full state.
+	*/
+	function getSyncState(component, state) {
+	  var stateFilterKeys = getStateFilterKeys(component);
+	  if (!stateFilterKeys) return state;
+	  var result = {};
+	  stateFilterKeys.forEach(function(sk) {
+	    for (var key in state) {
+	      if (state.hasOwnProperty(key) && sk === key) result[key] = state[key];
+	    }
+	  });
+	  return result;
+	}
+
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(29)))
+
+/***/ },
+/* 174 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2014 Facebook, Inc.
+	 *
+	 * Licensed under the Apache License, Version 2.0 (the "License");
+	 * you may not use this file except in compliance with the License.
+	 * You may obtain a copy of the License at
+	 *
+	 * http://www.apache.org/licenses/LICENSE-2.0
+	 *
+	 * Unless required by applicable law or agreed to in writing, software
+	 * distributed under the License is distributed on an "AS IS" BASIS,
+	 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	 * See the License for the specific language governing permissions and
+	 * limitations under the License.
+	 *
+	 * @providesModule warning
+	 */
+
+	"use strict";
+
+	/**
+	 * Similar to invariant but only logs a warning if the condition is not met.
+	 * This can be used to log issues in development environments in critical
+	 * paths. Removing the logging code for production environments will keep the
+	 * same logic and follow the same code paths.
+	 */
+
+	var warning = function() {};
+
+	if ("production" !== ({}).NODE_ENV) {
+	  warning = function(condition, format ) {var args=Array.prototype.slice.call(arguments,2);
+	    if (format === undefined) {
+	      throw new Error(
+	        '`warning(condition, format, ...args)` requires a warning ' +
+	        'message argument'
+	      );
+	    }
+
+	    if (!condition) {
+	      var argIndex = 0;
+	      console.warn('Warning: ' + format.replace(/%s/g, function()  {return args[argIndex++];}));
+	    }
+	  };
+	}
+
+	module.exports = warning;
+
+
+/***/ },
+/* 175 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {/*!
@@ -31837,10 +32064,10 @@
 	/******/ ])
 	});
 	;
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(174).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(176).Buffer))
 
 /***/ },
-/* 174 */
+/* 176 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer, global) {/*!
@@ -31853,9 +32080,9 @@
 
 	'use strict'
 
-	var base64 = __webpack_require__(175)
-	var ieee754 = __webpack_require__(176)
-	var isArray = __webpack_require__(177)
+	var base64 = __webpack_require__(177)
+	var ieee754 = __webpack_require__(178)
+	var isArray = __webpack_require__(179)
 
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -33633,10 +33860,10 @@
 	  return val !== val // eslint-disable-line no-self-compare
 	}
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(174).Buffer, (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(176).Buffer, (function() { return this; }())))
 
 /***/ },
-/* 175 */
+/* 177 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -33756,7 +33983,7 @@
 
 
 /***/ },
-/* 176 */
+/* 178 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -33846,7 +34073,7 @@
 
 
 /***/ },
-/* 177 */
+/* 179 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -33857,16 +34084,16 @@
 
 
 /***/ },
-/* 178 */
+/* 180 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(179);
+	var content = __webpack_require__(181);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(181)(content, {});
+	var update = __webpack_require__(183)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -33883,10 +34110,10 @@
 	}
 
 /***/ },
-/* 179 */
+/* 181 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(180)();
+	exports = module.exports = __webpack_require__(182)();
 	// imports
 
 
@@ -33897,7 +34124,7 @@
 
 
 /***/ },
-/* 180 */
+/* 182 */
 /***/ function(module, exports) {
 
 	/*
@@ -33953,7 +34180,7 @@
 
 
 /***/ },
-/* 181 */
+/* 183 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -34205,7 +34432,7 @@
 
 
 /***/ },
-/* 182 */
+/* 184 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global, module) {/**
@@ -51171,10 +51398,10 @@
 	  }
 	}.call(this));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(183)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(185)(module)))
 
 /***/ },
-/* 183 */
+/* 185 */
 /***/ function(module, exports) {
 
 	module.exports = function(module) {
@@ -51190,7 +51417,7 @@
 
 
 /***/ },
-/* 184 */
+/* 186 */
 /***/ function(module, exports) {
 
 	//- ----------------------------------
@@ -51459,12 +51686,12 @@
 	module.exports = displaCy;
 
 /***/ },
-/* 185 */
+/* 187 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _ = __webpack_require__(182);
+	var _ = __webpack_require__(184);
 
 	function coreNLP(text, opts) {
 	  opts = _.merge({}, coreNLP.DEFAULT_OPTS, opts);
@@ -51485,16 +51712,16 @@
 	module.exports = coreNLP;
 
 /***/ },
-/* 186 */
+/* 188 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(187);
+	var content = __webpack_require__(189);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(181)(content, {});
+	var update = __webpack_require__(183)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -51511,10 +51738,10 @@
 	}
 
 /***/ },
-/* 187 */
+/* 189 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(180)();
+	exports = module.exports = __webpack_require__(182)();
 	// imports
 
 

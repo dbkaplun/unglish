@@ -46,13 +46,22 @@ const QUILL_POS_FORMATS = {
   '.':  {color: 'gray'}, // ".", "?"
 };
 
+function ensureValidPromise (getPromise) {
+  let promise = getPromise();
+  return Promise.resolve(promise).then(val => (
+    promise === getPromise()
+      ? val
+      : ensureValidPromise(getPromise)
+  ));
+}
+
 var Unglish = React.createClass({
   mixins: [LocalStorageMixin],
   getInitialState () {
     return _.merge({
       text: this.props.initialText,
       coreNLPOpts: {
-        url: `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`
+        url: `${location.protocol !== 'http:' ? `${location.protocol}//cors-anywhere.herokuapp.com/` : ''}${coreNLP.DEFAULT_OPTS.url}`,
       },
     }, _([...new URLSearchParams(location.search.slice(1))])
       .fromPairs()
@@ -80,7 +89,9 @@ var Unglish = React.createClass({
     });
     this.quill.on('text-change', this.onQuillTextChange);
     this.quill.on('selection-change', this.onQuillSelectionChange);
-    this.quill.setText(this.state.text || '', 'initQuill');
+
+    let {text} = this.state;
+    if (typeof text === 'string') this.quill.setText(text, 'initQuill');
   },
 
   onQuillTextChange (newDelta, oldDelta, source) {
@@ -120,6 +131,8 @@ var Unglish = React.createClass({
         .join(", ")}`);
     });
 
+    this.getSelectedSentence().then(this.setSelectedSentence);
+
     this.setState({parsed});
     _.invoke(this, 'props.onParsed', parsed);
   },
@@ -128,21 +141,38 @@ var Unglish = React.createClass({
     this.setState({selection});
     _.invoke(this, 'props.onSelectionChange', selection);
 
-    if (selection) {
-      Promise.resolve(this.state.parsePromise).then(() => {
-        // wait for parse to call getSentence
-        let begin = _.first(this.getSentence(selection.index)                   .tokens).characterOffsetBegin;
-        let end   = _.last (this.getSentence(selection.index + selection.length).tokens).characterOffsetEnd;
+    this.getSelectedSentence().then(this.setSelectedSentence);
+  },
 
-        this.displacy.parse(this.quill.getText(begin, end - begin));
+  getSelectedSentence () {
+    return ensureValidPromise(() => this.state.parsePromise).then(() => {
+      let selection = this.quill.getSelection();
+      if (!selection) return;
 
-        let old = this.state.selectedSentence;
-        if (old) this.quill.formatText(old.begin, old.end - old.begin, {background: 'white'});
-        this.quill.formatText(begin, end - begin, {background: 'red'});
+      let beginSentence = this.getSentence(selection.index);
+      let begin = _.get(beginSentence, ['tokens', 0,  'characterOffsetBegin']);
+      if (typeof begin !== 'number') return;
 
-        this.setState({selectedSentence: {begin, end}});
-      });
+      let endSentenceTokens = (this.getSentence(selection.index + selection.length) || {}).tokens || [];
+      let end   = _.get(endSentenceTokens, [-1 + endSentenceTokens.length, 'characterOffsetEnd']);
+      if (typeof end !== 'number') return;
+
+      return {begin, end};
+    });
+  },
+
+  setSelectedSentence (selectedSentence) {
+    let old = this.state.selectedSentence;
+    if (old) {
+      let {begin, end} = old;
+      this.quill.formatText(begin, end - begin, {background: 'white'});
     }
+    if (selectedSentence) {
+      let {begin, end} = selectedSentence;
+      this.quill.formatText(begin, end - begin, {background: 'yellow'});
+      this.displacy.parse(this.quill.getText(begin, end - begin));
+    }
+    this.setState({selectedSentence});
   },
 
   getSentence (characterOffset) {
