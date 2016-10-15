@@ -29,10 +29,10 @@
     "quill": "1.0.6",
     "react": "15.3.2",
     "react-dom": "15.3.2",
-    "react-graph-vis": "github:stephaniefenton/react-graph-vis#3fa70dc496a30c47f1d13f0556b3d59b3cf4f232",
     "react-localstorage": "0.3.0",
     "sass-loader": "4.0.2",
     "style-loader": "0.13.1",
+    "vis": "4.16.1",
     "webpack": "1.13.2",
     "webpack-dev-middleware": "1.8.3"
   },

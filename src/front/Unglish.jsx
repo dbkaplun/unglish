@@ -1,5 +1,5 @@
 import React from 'react';
-import Graph from 'react-graph-vis';
+import vis from 'vis';
 import LocalStorageMixin from 'react-localstorage';
 import Quill from 'quill'; require('quill/dist/quill.core.css');
 import _ from 'lodash';
@@ -70,6 +70,13 @@ var Unglish = React.createClass({
 
   componentDidMount () {
     process.nextTick(this.initQuill);
+    this.vis = new vis.Network(this.refs.vis, {}, {
+      // layout: {hierarchical: {direction: 'UD'}}
+    });
+  },
+
+  componentWillUnmount () {
+    this.vis.destroy();
   },
 
   initQuill () {
@@ -193,24 +200,22 @@ var Unglish = React.createClass({
   render () {
     // FIXME: show all selected sentences, not just beginSentence
     let deps = _.get(this.state, 'beginSentence.enhancedPlusPlusDependencies', []);
-    let graphRef = _.get(this.refs, 'graph', {});
+    _.invoke(this.vis, 'setData', {
+      nodes: deps.reduce((nodes, {dependent, dependentGloss, governor, governorGloss}) => {
+        nodes[dependent] = {id: dependent, label: dependentGloss, level: 0};
+        nodes[governor]  = {id: governor,  label: governorGloss,  level: 0};
+        return nodes;
+      }, []),
+      edges: deps.reduce((edges, {dependent, governor, dep}, i) => {
+        if (i !== dependent) edges.push({label: dep, from: `${i}`,        to: `${dependent}`});
+        if (i !== governor)  edges.push({label: dep, from: `${governor}`, to: `${i}`});
+        return edges;
+      }, [])
+    });
     return (
       <div className="unglish">
         <div ref="quill" className="unglish-quill" />
-        <div ref="graph" className="unglish-graph">
-          <Graph graph={{
-            nodes: deps.reduce((nodes, {dependent, dependentGloss, governor, governorGloss}) => {
-              nodes[dependent] = {id: dependent, label: dependentGloss};
-              nodes[governor]  = {id: governor,  label: governorGloss};
-              return nodes;
-            }, []),
-            edges: deps.reduce((edges, {dependent, governor, dep}, i) => {
-              if (i !== dependent) edges.push({from: dependent, to: i,        label: dep});
-              if (i !== governor)  edges.push({from: i,         to: governor, label: dep});
-              return edges;
-            }, [])
-          }} />
-        </div>
+        <div ref="vis" className="unglish-vis" />
       </div>
     );
   },

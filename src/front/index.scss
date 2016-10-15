@@ -26,7 +26,7 @@ html, body { @extend .height-100; }
 .unglish {
   @extend .height-100;
   .unglish-quill { height: 66.6%; }
-  .unglish-graph { height: 33.3%; >* { @extend .height-100; } }
+  .unglish-vis { height: 33.3%; }
 }
 
 $osx-scrollbar-width: 7px;
