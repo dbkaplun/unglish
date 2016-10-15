@@ -34,3 +34,14 @@ html, body { @extend .height-100; }
   .unglish-quill { height: 66.6%; }
   .unglish-displacy { height: 33.3%; overflow: auto; }
 }
+
+$osx-scrollbar-width: 7px;
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: $osx-scrollbar-width; height: $osx-scrollbar-width;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: floor(($osx-scrollbar-width+1) / 2);
+    background-color: rgba(0,0,0,.5);
+    -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+}
