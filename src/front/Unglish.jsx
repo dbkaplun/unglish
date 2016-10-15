@@ -1,9 +1,8 @@
 import React from 'react';
+import Graph from 'react-graph-vis';
 import LocalStorageMixin from 'react-localstorage';
 import Quill from 'quill'; require('quill/dist/quill.core.css');
 import _ from 'lodash';
-
-const displaCy = require('exports?displaCy!displacy/assets/js/displacy');
 
 import coreNLP from './coreNLP';
 
@@ -71,8 +70,6 @@ var Unglish = React.createClass({
 
   componentDidMount () {
     process.nextTick(this.initQuill);
-    this.displacy = new displaCy('https://api.explosion.ai/displacy/dep/', {});
-    this.displacy.container = this.refs.displacy;
   },
 
   initQuill () {
@@ -100,7 +97,7 @@ var Unglish = React.createClass({
 
     this.setState({
       text,
-      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed),
+      parsePromise: coreNLP(text, this.state.coreNLPOpts).then(this.onParsed).catch(console.error),
     });
     _.invoke(this, 'props.onTextChange', text);
   },
@@ -131,7 +128,7 @@ var Unglish = React.createClass({
         .join(", ")}`);
     });
 
-    this.getSelectedSentence().then(this.setSelectedSentence);
+    this.setSelectedSentence().catch(console.error);
 
     this.setState({parsed});
     _.invoke(this, 'props.onParsed', parsed);
@@ -140,39 +137,17 @@ var Unglish = React.createClass({
   onQuillSelectionChange (selection, oldSelection, source) {
     this.setState({selection});
     _.invoke(this, 'props.onSelectionChange', selection);
-
-    this.getSelectedSentence().then(this.setSelectedSentence);
+    this.setSelectedSentence().catch(console.error);
   },
 
-  getSelectedSentence () {
+  setSelectedSentence () {
     return ensureValidPromise(() => this.state.parsePromise).then(() => {
       let selection = this.quill.getSelection();
-      if (!selection) return;
-
-      let beginSentence = this.getSentence(selection.index);
-      let begin = _.get(beginSentence, ['tokens', 0,  'characterOffsetBegin']);
-      if (typeof begin !== 'number') return;
-
-      let endSentenceTokens = (this.getSentence(selection.index + selection.length) || {}).tokens || [];
-      let end   = _.get(endSentenceTokens, [-1 + endSentenceTokens.length, 'characterOffsetEnd']);
-      if (typeof end !== 'number') return;
-
-      return {begin, end};
+      if (selection) this.setState({
+        beginSentence: this.getSentence(selection.index),
+        endSentence:   this.getSentence(selection.index + selection.length)
+      });
     });
-  },
-
-  setSelectedSentence (selectedSentence) {
-    let old = this.state.selectedSentence;
-    if (old) {
-      let {begin, end} = old;
-      this.quill.formatText(begin, end - begin, {background: 'white'});
-    }
-    if (selectedSentence) {
-      let {begin, end} = selectedSentence;
-      this.quill.formatText(begin, end - begin, {background: 'yellow'});
-      this.displacy.parse(this.quill.getText(begin, end - begin));
-    }
-    this.setState({selectedSentence});
   },
 
   getSentence (characterOffset) {
@@ -190,11 +165,52 @@ var Unglish = React.createClass({
     return _.nth(sentences, i);
   },
 
+  getSentenceBegin (sentence) {
+    return _.get(sentence, ['tokens', 0, 'characterOffsetBegin']);
+  },
+
+  getSentenceEnd (sentence) {
+    let tokens = (sentence || {}).tokens || [];
+    return _.get(tokens, [-1 + tokens.length, 'characterOffsetEnd']);
+  },
+
+  componentWillUpdate (nextProps, nextState) {
+    if (this.quill) {
+      let begin = this.getSentenceBegin(this.state.beginSentence);
+      let end = this.getSentenceEnd(this.state.endSentence);
+      if (typeof begin === 'number' && typeof end === 'number') {
+        this.quill.formatText(begin, end - begin, {background: 'white'});
+      }
+
+      begin = this.getSentenceBegin(nextState.beginSentence);
+      end = this.getSentenceEnd(nextState.endSentence);
+      if (typeof begin === 'number' && typeof end === 'number') {
+        this.quill.formatText(begin, end - begin, {background: 'yellow'});
+      }
+    }
+  },
+
   render () {
+    // FIXME: show all selected sentences, not just beginSentence
+    let deps = _.get(this.state, 'beginSentence.enhancedPlusPlusDependencies', []);
+    let graphRef = _.get(this.refs, 'graph', {});
     return (
       <div className="unglish">
         <div ref="quill" className="unglish-quill" />
-        <div ref="displacy" className="unglish-displacy" />
+        <div ref="graph" className="unglish-graph">
+          <Graph graph={{
+            nodes: deps.reduce((nodes, {dependent, dependentGloss, governor, governorGloss}) => {
+              nodes[dependent] = {id: dependent, label: dependentGloss};
+              nodes[governor]  = {id: governor,  label: governorGloss};
+              return nodes;
+            }, []),
+            edges: deps.reduce((edges, {dependent, governor, dep}, i) => {
+              if (i !== dependent) edges.push({from: dependent, to: i,        label: dep});
+              if (i !== governor)  edges.push({from: i,         to: governor, label: dep});
+              return edges;
+            }, [])
+          }} />
+        </div>
       </div>
     );
   },

@@ -2,12 +2,6 @@ $icon-font-path: '~bootstrap-sass/assets/fonts/bootstrap/';
 @import '~bootstrap-sass/assets/stylesheets/bootstrap-sprockets';
 @import '~bootstrap-sass/assets/stylesheets/bootstrap';
 
-$font-primary: $font-family-base;
-$font-secondary: $font-family-monospace;
-$displacy: (text: $text-color, arrow: $gray-light, arrowhead: $gray, label: $gray-light, tag: $brand-success, tag-ent: $brand-info, tag-verb: $brand-danger, tag-noun: $brand-warning, tag-punct: $gray-light);
-@import '~displacy/assets/css/_variables';
-@import '~displacy/assets/css/_displacy-theme';
-
 // inspired by https://github.com/twbs/bootstrap-sass/blob/v3.3.7/assets/stylesheets/bootstrap/_responsive-embed.scss
 .overlay-parent {
   position: relative;
@@ -32,7 +26,7 @@ html, body { @extend .height-100; }
 .unglish {
   @extend .height-100;
   .unglish-quill { height: 66.6%; }
-  .unglish-displacy { height: 33.3%; overflow: auto; }
+  .unglish-graph { height: 33.3%; >* { @extend .height-100; } }
 }
 
 $osx-scrollbar-width: 7px;
