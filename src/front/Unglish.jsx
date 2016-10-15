@@ -1,11 +1,11 @@
-const React = require('react');
-const LocalStorageMixin = require('react-localstorage');
-const Quill = require('quill'); require('quill/dist/quill.core.css');
-const _ = require('lodash');
+import React from 'react';
+import LocalStorageMixin from 'react-localstorage';
+import Quill from 'quill'; require('quill/dist/quill.core.css');
+import _ from 'lodash';
 
 const displaCy = require('exports?displaCy!displacy/assets/js/displacy');
 
-const coreNLP = require('./coreNLP');
+import coreNLP from './coreNLP';
 
 // https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 const QUILL_POS_FORMATS = {
@@ -200,4 +200,4 @@ var Unglish = React.createClass({
   },
 });
 
-module.exports = Unglish;
+export default Unglish;

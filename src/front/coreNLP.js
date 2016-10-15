@@ -1,4 +1,4 @@
-const _ = require('lodash');
+import _ from 'lodash';
 
 function coreNLP (text, opts) {
   opts = _.merge({}, coreNLP.DEFAULT_OPTS, opts);
@@ -17,4 +17,4 @@ coreNLP.DEFAULT_OPTS = {
   }
 };
 
-module.exports = coreNLP;
+export default coreNLP;

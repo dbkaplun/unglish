@@ -1,7 +1,7 @@
-const React = require('react');
-const ReactDOM = require('react-dom');
+import React from 'react';
+import ReactDOM from 'react-dom';
 
-const Unglish = require('./Unglish.jsx');
+import Unglish from './Unglish.jsx';
 
 require('./index.scss');
 
